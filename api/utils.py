@@ -1,13 +1,21 @@
 from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
+import logging
 
 from schemas import PlotProperties
 
-VECTOR_SIZE = 384
-MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+VECTOR_SIZE = 1024
+MODEL_NAME = "intfloat/multilingual-e5-large"
 
 _embedder = None
 _client = None
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    filename='logs.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 def get_embedder():
     """

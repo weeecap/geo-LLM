@@ -1,4 +1,4 @@
-from typing import List, Literal, Union, Optional
+from typing import List, Literal, Union, Optional, Dict
 from pydantic import BaseModel, ConfigDict
 
 # ------------------------
@@ -81,9 +81,9 @@ class CRS(BaseModel):
     properties: CRSProperties
 
 
-# ----------------------------
+# -------------------------------
 # GeoJSON Feature & Collection
-# ----------------------------
+# -------------------------------
 
 class Feature(BaseModel):
     """
@@ -102,3 +102,7 @@ class FeatureCollection(BaseModel):
     name: Optional[str] = None
     crs: Optional[CRS] = None
     features: List[Feature]
+
+
+class ChatRequest(BaseModel):
+    messages: List[Dict[str, str]]

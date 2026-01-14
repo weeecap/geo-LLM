@@ -8,30 +8,21 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 
-from schemas import FeatureCollection
-from geo_ingest import (
-    ingest_feature, 
-    update_feature, 
-    collection_delete, 
-    select_by_condition, 
-    retrieve_point,
-    ingest_doc,
-    update_doc
-)
+from schemas import FeatureCollection, ChatRequest
+from engine import generate_response
+from utils import logger
+from ingest.documents import ingest_doc
+from ingest.geo import ingest_feature
+from crud.qdrant_ops import collection_delete, select_by_condition, retrieve_point
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(
-    filename='logs.log',
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 
-# @asynccontextmanager
-# async def lifespan(app:FastAPI);
-#     ml_model =
-#     yield
+@asynccontextmanager
+async def lifespan(app:FastAPI):
+    from engine import LLMManager
+    LLMManager.get_instance()
+    yield
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 logging.info('Backend is started')
 
 @app.get("/")
@@ -65,7 +56,8 @@ async def add_plots(
 async def upload_docs(
     file:UploadFile=File(...),
     collection_name:str=Form("document")
-):    
+):  
+    file_name = file.filename  
     try:
         document = await file.read()
     except Exception as e:
@@ -76,7 +68,7 @@ async def upload_docs(
         tmp_path = tmp.name
 
     try:
-        result = await run_in_threadpool(ingest_doc, tmp_path, collection_name)
+        result = await run_in_threadpool(ingest_doc, tmp_path, collection_name, file_name)
     except Exception as e:
         raise HTTPException(500, f"Error while uploading '{file}'")
     finally:
@@ -84,53 +76,6 @@ async def upload_docs(
             os.unlink(tmp_path)
         except OSError as e:
             logger.warning(f"Failed to delete temp file {tmp_path}: {e}")
-    return JSONResponse(result)
-
-@app.post("/update_docs")
-async def update_docs(
-    file:UploadFile=File(...),
-    collection_name:str=Form("document")
-):
-    try:
-        document = await file.read()
-    except Exception as e:
-        raise HTTPException(400, "Inaccurate PDF")
-    
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-        tmp.write(document)
-        tmp_path = tmp.name
-
-    try:
-        result = await run_in_threadpool(update_doc, tmp_path, collection_name)
-    except Exception as e:
-        raise HTTPException(500, f"Error while uploading '{file}'" )
-    finally:
-        try:
-            os.unlink(tmp_path)
-        except OSError as e:
-            logger.warning(f"Failed to delete temp file {tmp_path}: {e}")
-    return JSONResponse(result)
-
-@app.post('/update_plots', response_model=FeatureCollection)
-async def update_plots(
-    file:UploadFile = File(...),
-    collection_name:str = Form("land_plots")
-):
-    contents = await file.read()
-    try:
-        geojson_data = json.loads(contents.decode("utf-8"))
-    except json.JSONDecodeError:
-        logging.error(f'Error 400 while perform add_plots endpoint')
-        raise HTTPException(400, "Inaccurate JSON")
-    
-    try:
-        result = await run_in_threadpool(update_feature, geojson_data,collection_name)
-    except Exception as e:
-        logging.error(f'Error while perform update_plots endpoint: {str(e)}')
-        raise HTTPException(500, f"Error whilee upsert: {str(e)}")
-    
-    if result["status"] == "error":
-        raise HTTPException(400, result["message"])
     return JSONResponse(result)
 
 @app.delete('/delete_collection')
@@ -165,3 +110,15 @@ async def select_by_id(collection_name:str, value:int):
         logging.error(f'Error while perform select_by_id endpoint: {str(e)}')
         raise HTTPException(500,f"An error occured while retriecing by id:'{value}'")
     return JSONResponse(result)
+
+@app.post("/chat")
+async def chat(request: ChatRequest):
+    try:
+        response = await run_in_threadpool(
+            generate_response,
+            prompt=request.messages
+        )
+        return {"response": response}
+    except Exception as e:
+        logger.error(f"Generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
