@@ -1,7 +1,5 @@
 from typing import Any
-
 from qdrant_client.http import models
-
 from utils import get_client, logger
 
 def collection_delete(collection_name:str) -> dict:

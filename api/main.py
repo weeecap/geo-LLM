@@ -8,17 +8,15 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 
-from schemas import FeatureCollection, ChatRequest
-from engine import generate_response
+from schemas import ChatRequest
+from engine import generate_response, LLMManager
 from utils import logger
 from ingest.documents import ingest_doc
 from ingest.geo import ingest_feature
 from crud.qdrant_ops import collection_delete, select_by_condition, retrieve_point
 
-
 @asynccontextmanager
 async def lifespan(app:FastAPI):
-    from engine import LLMManager
     LLMManager.get_instance()
     yield
 
@@ -29,7 +27,7 @@ logging.info('Backend is started')
 async def read_root():
     return {'message':"Hello"}
 
-@app.post('/add_plots', response_model=FeatureCollection)
+@app.post('/add_plots')
 async def add_plots(
     file:UploadFile = File(...), 
     collection_name:str = Form("land_plots")

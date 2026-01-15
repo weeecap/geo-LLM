@@ -73,48 +73,34 @@ def ingest_feature(
     features = collection.features
 
     for feature in features:
-        # Extract properties (metadata) — may be None, so default to empty dict
         plot_id = feature.properties.id
         props = feature.properties or {}
         
-        # Extract geometry — skip if missing
         geom = feature.geometry
         if not geom:
             logger.warning("Skipping feature %s: missing geometry", plot_id)
             continue
         try:
-            # Convert Pydantic geometry to dict if needed (for shapely)
             geom_dict = feature.geometry.model_dump()
             shapely_geom = shape(geom_dict)
             
-            # Attempt to fix invalid geometries (common with real-world data)
             if not shapely_geom.is_valid:
                 shapely_geom = shapely_geom.buffer(0)
             
-            # Compute centroid (representative point for geospatial queries)
             centroid = shapely_geom.centroid
             
         except (ShapelyError, Exception) as e:
             logger.warning("Skipping feature %s: geometry error - %s", plot_id, e)
-            continue  # Skip malformed geometries
+            continue  
 
-        # Generate a natural language description from properties (for embedding)
         description = generate_description(props)
-        
-        # Convert description text into a dense vector embedding
-        vector = embedder.encode(description).tolist()  # .tolist() for JSON serialization
-
-        # Build payload (metadata stored in Qdrant alongside vector)
+        vector = embedder.encode(description).tolist()  
         payload = feature.properties.model_dump()
 
-        # Add derived fields to payload:
-        #   - Full description (for display or RAG context)
         payload["description"] = description
         payload["geometry"] = json.dumps(feature.geometry.model_dump(), ensure_ascii=False)
         payload["location"] = {"lon": float(centroid.x), "lat": float(centroid.y)}
 
-        # Create a Qdrant point with unique ID, vector, and payload
-        # Note: Using index `idx` as ID — consider using a stable ID (e.g., from props) in production
         point = models.PointStruct(
             id=plot_id,
             vector=vector,
@@ -122,16 +108,13 @@ def ingest_feature(
         )
         points.append(point)
 
-    # Upload all processed points to Qdrant in a single batch (efficient)
-
     logger.info("Uploading %d points to collection '%s'...", len(points), collection_name)
     client.upload_points(
         collection_name=collection_name,
         points=points,
-        wait=True  # Wait until data is persisted
+        wait=True  
     )
 
-    # Return success response with stats
     return {
         "status": "success",
         "collection_name": collection_name,

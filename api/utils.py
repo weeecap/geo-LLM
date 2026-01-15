@@ -3,9 +3,9 @@ from qdrant_client import QdrantClient
 import logging
 
 from schemas import PlotProperties
+from settings import settings
 
-VECTOR_SIZE = 1024
-MODEL_NAME = "intfloat/multilingual-e5-large"
+VECTOR_SIZE = settings.embedding.vector_size
 
 _embedder = None
 _client = None
@@ -23,7 +23,7 @@ def get_embedder():
     """
     global _embedder
     if _embedder is None:
-        _embedder = SentenceTransformer(MODEL_NAME)
+        _embedder = SentenceTransformer(settings.embedding.model_name)
     return _embedder
 
 def get_client():
@@ -32,7 +32,10 @@ def get_client():
     """
     global _client 
     if _client is None: 
-        _client = QdrantClient("localhost", port=6333)
+        _client = QdrantClient(
+            host=settings.qdrant.host,
+            port=settings.qdrant.port
+        )
     return _client
 
 '''should recreate this function to work properly 

@@ -4,6 +4,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from qdrant_client.http import models
 from qdrant_client.models import VectorParams, Distance
 
+from ..settings import settings
 from ..utils import get_client, get_embedder, VECTOR_SIZE, logger
 
 def ingest_doc(file_path:str, collection_name:str, file_name:str) -> dict:
@@ -49,8 +50,8 @@ def ingest_doc(file_path:str, collection_name:str, file_name:str) -> dict:
 
 
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=300,
-        chunk_overlap=30,
+        chunk_size=settings.embedding.chunk_size,
+        chunk_overlap=settings.embedding.chunk_overlap,
         separators=[
             "\n\n",        
             "\n",          
