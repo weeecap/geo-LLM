@@ -7,14 +7,16 @@ from qdrant_client.models import VectorParams, Distance
 from shapely.geometry import shape
 from shapely.errors import ShapelyError
 
-from ..schemas import FeatureCollection
-from ..utils import (
+from schemas import FeatureCollection
+from settings import settings
+from utils import (
     logger, 
     get_client, 
     get_embedder, 
-    generate_description,
-    VECTOR_SIZE
+    generate_description
     )
+
+VECTOR_SIZE = settings.embedding.vector_size
 
 def ingest_feature(
         geojson_data:Dict[str,Any],
@@ -94,7 +96,7 @@ def ingest_feature(
             continue  
 
         description = generate_description(props)
-        vector = embedder.encode(description).tolist()  
+        vector = embedder.embed_query(description)  
         payload = feature.properties.model_dump()
 
         payload["description"] = description

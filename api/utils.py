@@ -1,3 +1,4 @@
+from langchain_core.embeddings import Embeddings
 from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
 import logging
@@ -17,13 +18,43 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
+class QueryEmbeddings(Embeddings):
+    """
+    A LangChain-compatible embedding wrapper for SentenceTransformer models
+    Class wraps a SentenceTransformer model and implements LangChain interface
+    
+    Args:
+        model_name (str, optional): The name or path of the SentenceTransformer model
+            to load
+    """
+    def __init__(self, model_name:str=settings.embedding.model_name) -> None:
+        super().__init__()
+        self.model = SentenceTransformer(model_name)
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        passages = [f"passage: {text}" for text in texts]
+        return self.model.encode(
+            passages,
+            normalize_embeddings=True,
+            convert_to_numpy=False
+        ).tolist()
+    
+    def embed_query(self, text: str) -> list[float]:
+        query = f'query: {text}'
+        return self.model.encode(
+            query,
+            normalize_embeddings=True,
+            convert_to_numpy=False  
+        ).tolist()
+
 def get_embedder():
     """
-    Defining embedder using singleton pattern
+     Defining embedder using singleton pattern
     """
     global _embedder
     if _embedder is None:
-        _embedder = SentenceTransformer(settings.embedding.model_name)
+        embedding_model = settings.embedding.model_name
+        _embedder = QueryEmbeddings(model_name=embedding_model)
     return _embedder
 
 def get_client():

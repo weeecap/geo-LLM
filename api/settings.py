@@ -33,7 +33,7 @@ class LLMConfig(BaseModel):
     Configuration for loading and running a local LLM in GGUF 
     """
     model_path: str = "/Users/dzmitry.mikhasko/Documents/geo-rag/api/Mistral-Nemo-Instruct-2407-Q4_K_S.gguf"
-    temperature:float = 0.7
+    temperature:float = 0.0
     n_ctx:int = 2048
     n_gpu_layers:int = -1
     verbose:bool = False

@@ -4,8 +4,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from qdrant_client.http import models
 from qdrant_client.models import VectorParams, Distance
 
-from ..settings import settings
-from ..utils import get_client, get_embedder, VECTOR_SIZE, logger
+from settings import settings
+from utils import get_client, get_embedder, VECTOR_SIZE, logger
 
 def ingest_doc(file_path:str, collection_name:str, file_name:str) -> dict:
     """
@@ -71,31 +71,29 @@ def ingest_doc(file_path:str, collection_name:str, file_name:str) -> dict:
                 distance=Distance.COSINE
             )
         )
-
+    try:
+        raw_texts = [doc.page_content for doc in texts]
+        vectors = embedder.embed_documents(raw_texts)  
+    except Exception as e:
+        return {"status": "error", "message": f"Embedding generation failed: {str(e)}"}
+    
     points = []
 
-    for i, doc in enumerate(texts):
+    for i, (doc,vector) in enumerate(zip(texts,vectors)):
         try:
-            text_to_vector = f"passage: {doc.page_content}"
-            vector = embedder.encode(
-                text_to_vector,
-                normalize_embeddings=True
-                ).tolist()
-
             payload = {
-                "text":doc.page_content,
-                "source":file_name,
+                "text": doc.page_content,
+                "source": file_name,
                 "page": doc.metadata.get("page", None),
                 "chunk_index": i
             }
-
             points.append(
                 models.PointStruct(
-                    id=str(uuid.uuid4()) ,
-                    vector=vector,
+                    id=str(uuid.uuid4()),
+                    vector=vector, 
                     payload=payload
                 )
-            )
+        )
         except Exception as e:
             logger.info(f"Skipping chunk {i} due to embedding error: {e}")
             continue

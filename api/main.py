@@ -59,14 +59,14 @@ async def upload_docs(
     try:
         document = await file.read()
     except Exception as e:
-        raise HTTPException(400, "Inaccurate PDF")
+        raise HTTPException(400, "Inaccurate PDF, file name is empty")
     
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         tmp.write(document)
         tmp_path = tmp.name
 
     try:
-        result = await run_in_threadpool(ingest_doc, tmp_path, collection_name, file_name)
+        result = await run_in_threadpool(ingest_doc, tmp_path, collection_name, file_name) #type:ignore
     except Exception as e:
         raise HTTPException(500, f"Error while uploading '{file}'")
     finally:

@@ -103,6 +103,14 @@ class FeatureCollection(BaseModel):
     crs: Optional[CRS] = None
     features: List[Feature]
 
+# -------------------------------
+# Chat Model
+# -------------------------------
+
+"""
+ List of chat messages in format:
+    [{"role": "user", "content": "..."}, ...]
+"""
 
 class ChatRequest(BaseModel):
     messages: List[Dict[str, str]]
