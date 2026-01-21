@@ -38,6 +38,7 @@ def ingest_doc(file_path:str, collection_name:str, file_name:str) -> dict:
             - "ingested_points" (int, optional): Number of successfully uploaded vector points.
     """
     embedder = get_embedder()
+    logger.info(f"'{embedder}")
     client = get_client()
 
     try:
@@ -93,7 +94,8 @@ def ingest_doc(file_path:str, collection_name:str, file_name:str) -> dict:
                     vector=vector, 
                     payload=payload
                 )
-        )
+            )
+            logger.info('points was created succesfully')
         except Exception as e:
             logger.info(f"Skipping chunk {i} due to embedding error: {e}")
             continue
@@ -101,12 +103,14 @@ def ingest_doc(file_path:str, collection_name:str, file_name:str) -> dict:
     if not points:
         return {"status": "error", "message": "No valid chunks to ingest"}
     
+    logger.info("Trying to upsert points")
     client.upsert(
         collection_name=collection_name,
         points=points, 
         wait=True
     )
 
+    logger.info(f"Successfully ingested {len(points)} chunks from '{file_path}' into '{collection_name}'.")
     return {
         "status": "success",
         "collection_name": collection_name,

@@ -23,8 +23,8 @@ class EmbeddingConfig(BaseModel):
     """
     Configuration for text embedding generation and document chunking
     """
-    model_name:str = 'intfloat/multilingual-e5-large'
-    vector_size:int = 1024
+    model_name:str = 'intfloat/multilingual-e5-small'
+    vector_size:int = 384
     chunk_size:int = 500
     chunk_overlap:int = 100   
 

@@ -1,3 +1,4 @@
+import torch
 from langchain_core.embeddings import Embeddings
 from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
@@ -32,20 +33,30 @@ class QueryEmbeddings(Embeddings):
         self.model = SentenceTransformer(model_name)
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        logger.info('embed_document function is called')
         passages = [f"passage: {text}" for text in texts]
-        return self.model.encode(
+        embeddings = self.model.encode(
             passages,
             normalize_embeddings=True,
             convert_to_numpy=False
-        ).tolist()
+        )
+    
+        if isinstance(embeddings, torch.Tensor):
+            embeddings = embeddings.cpu().tolist()
+        return embeddings
     
     def embed_query(self, text: str) -> list[float]:
+        logger.info('embed_query function is called')
         query = f'query: {text}'
-        return self.model.encode(
+        embeddings =  self.model.encode(
             query,
             normalize_embeddings=True,
             convert_to_numpy=False  
-        ).tolist()
+        )
+        
+        if isinstance(embeddings, torch.Tensor):
+            embeddings = embeddings.cpu().tolist()
+        return embeddings
 
 def get_embedder():
     """
@@ -55,6 +66,7 @@ def get_embedder():
     if _embedder is None:
         embedding_model = settings.embedding.model_name
         _embedder = QueryEmbeddings(model_name=embedding_model)
+    logger.info("Embedder client was load")
     return _embedder
 
 def get_client():
@@ -67,6 +79,7 @@ def get_client():
             host=settings.qdrant.host,
             port=settings.qdrant.port
         )
+    logger.info("Qdrant client was load")
     return _client
 
 '''should recreate this function to work properly 

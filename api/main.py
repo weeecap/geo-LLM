@@ -66,7 +66,7 @@ async def upload_docs(
         tmp_path = tmp.name
 
     try:
-        result = await run_in_threadpool(ingest_doc, tmp_path, collection_name, file_name) #type:ignore
+        result = await run_in_threadpool(ingest_doc, tmp_path, collection_name, file_name) #type:ignore  
     except Exception as e:
         raise HTTPException(500, f"Error while uploading '{file}'")
     finally:
@@ -110,13 +110,18 @@ async def select_by_id(collection_name:str, value:int):
     return JSONResponse(result)
 
 @app.post("/chat")
-async def chat(request: ChatRequest):
-    try:
-        response = await run_in_threadpool(
-            generate_response,
-            prompt=request.messages
-        )
-        return {"response": response}
-    except Exception as e:
-        logger.error(f"Generation error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+async def chat(request:ChatRequest):
+    answer = generate_response(request.messages)
+    return {"response": answer}
+
+# @app.post("/chat")
+# async def chat(request: ChatRequest):
+#     try:
+#         response = await run_in_threadpool(
+#             generate_response,
+#             prompt=request.messages
+#         )
+#         return {"response": response}
+#     except Exception as e:
+#         logger.error(f"Generation error: {e}")
+#         raise HTTPException(status_code=500, detail=str(e))
