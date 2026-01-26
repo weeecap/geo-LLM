@@ -1,11 +1,17 @@
-import axios from 'axios';
-import { ChatResponse } from '../types';
-
-const API_BASE_URL = 'http://localhost:8000';
-
-export const sendChatMessage = async (query: string) => {
-  const response = await axios.post<ChatResponse>(`${API_BASE_URL}/chat`, {
-    messages: query,
+// src/services/api.ts
+export const sendChatMessage = async (userMessage: string): Promise<string> => {
+  const response = await fetch('http://localhost:8000/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messages: [{ role: 'user', content: userMessage.trim() }]
+    })
   });
-  return response.data.response;
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || 'Ошибка сервера');
+  }
+
+  return await response.text();
 };

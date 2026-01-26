@@ -1,9 +1,10 @@
-from settings import settings
 from langchain.agents import create_agent
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain 
 from langchain_classic.chains.retrieval import create_retrieval_chain
 from langchain_community.chat_models import ChatLlamaCpp
 from langchain.agents.middleware import wrap_model_call
+
+from settings import settings
 from tools import retrieve_context
 from utils import logger
 
@@ -22,7 +23,8 @@ class LLMManager():
                 model_path=settings.llm.model_path,
                 n_ctx=settings.llm.n_ctx,
                 n_gpu_layers=settings.llm.n_gpu_layers,
-                verbose=settings.llm.verbose
+                verbose=settings.llm.verbose,
+                streaming=True
             )
         return cls._instance
     
@@ -97,17 +99,23 @@ def generate_response(messages:list):
             break
     
     if not query:
-        return "Не удалось определить вопрос."
+        return "Question is not defined"
 
     try:
         agent = LLMManager.get_agent()
-        logger.info(f"Agent has been created {agent}")
-        response = agent.invoke({"messages":messages})
-        logger.info(response)
-        return response["messages"][-1].content 
-    
+        logger.info(f"Agent type: {type(agent)}")
+
+        try:
+            response = agent.invoke({"messages":messages})
+            logger.info(f"Response {response}")
+            logger.info(f'{response["messages"][-1].content}')
+            return response["messages"][-1].content
+        
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            return "Generation issue."
+
     except Exception as e:
-  
-        print(f"Ошибка в RAG: {e}")
-        return "Произошла ошибка при обработке запроса."
+        logger.error(f"RAG issue: {e}")
+        return "An error occured while response processing"
 

@@ -1,21 +1,43 @@
 import React, { useState } from 'react';
 import QueryInput from './components/QueryInput';
+import ResponsePanel from './components/ResponsePanel';
+import { sendChatMessage } from './services/api';
+
+const simulateTyping = (text: string, onChar: (char: string) => void, speedMs: number = 15) => {
+  let index = 0;
+  const interval = setInterval(() => {
+    if (index < text.length) {
+      onChar(text[index]);
+      index++;
+    } else {
+      clearInterval(interval);
+    }
+  }, speedMs);
+};
 
 export default function App() {
   const [input, setInput] = useState('');
+  const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
     if (!input.trim()) return;
 
     setLoading(true);
+    setResponse('');
+
     try {
-      // Replace this with your actual API call later
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate delay
-      alert('✅ Request sent to backend. Check console for response.');
-    } catch (error) {
-      console.error(error);
-      alert('❌ Error: Could not reach backend.');
+      const fullAnswer = await sendChatMessage(input);
+      // Имитируем streaming
+      simulateTyping(fullAnswer, (char) => {
+        setResponse(prev => prev + char);
+      });
+    } catch (error: any) {
+      console.error('Ошибка:', error);
+      setResponse(
+        error.message ||
+        '❌ Не удалось связаться с бэкендом. Проверьте, запущен ли он на порту 8000.'
+      );
     } finally {
       setLoading(false);
     }
@@ -37,13 +59,13 @@ export default function App() {
       <div
         style={{
           width: '100%',
-          maxWidth: '80≠0px',
+          maxWidth: '600px',
           backgroundColor: 'rgba(30, 35, 48, 0.7)',
           backdropFilter: 'blur(10px)',
           borderRadius: '16px',
           padding: '32px',
           boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
-          border: '2px solid rgba(255, 255, 255, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
         }}
       >
         <h1
@@ -59,15 +81,8 @@ export default function App() {
         >
           AI Land Suitability Analyzer
         </h1>
-        <p
-          style={{
-            textAlign: 'center',
-            color: '#aaa',
-            fontSize: '14px',
-            marginBottom: '24px',
-          }}
-        >
-          Describe your ideal plot in natural language
+        <p style={{ textAlign: 'center', color: '#aaa', fontSize: '14px', marginBottom: '24px' }}>
+          Опишите желаемый участок на естественном языке
         </p>
 
         <QueryInput
@@ -77,9 +92,12 @@ export default function App() {
           disabled={loading}
         />
 
+        <ResponsePanel response={response} />
+
+        {/* Подсказка */}
         <div
           style={{
-            marginTop: '16px',
+            marginTop: '20px',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
@@ -89,15 +107,8 @@ export default function App() {
         >
           <span>💡</span>
           <span>
-            Make sure your FastAPI backend is running on{' '}
-            <code
-              style={{
-                backgroundColor: '#1e293b',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                fontSize: '12px',
-              }}
-            >
+            Бэкенд должен быть запущен на{' '}
+            <code style={{ backgroundColor: '#1e293b', padding: '2px 6px', borderRadius: '4px' }}>
               http://localhost:8000
             </code>
           </span>

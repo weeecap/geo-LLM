@@ -5,7 +5,8 @@ import os
 
 from fastapi import FastAPI, Form, UploadFile, File, HTTPException
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from schemas import ChatRequest
@@ -22,6 +23,21 @@ async def lifespan(app:FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 logging.info('Backend is started')
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=
+    [
+        "http://localhost:5173",      
+        "http://localhost:3000",       
+        "http://192.168.1.100:5173",  
+        "http://192.168.1.100",        
+        "*",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 async def read_root():
@@ -109,19 +125,7 @@ async def select_by_id(collection_name:str, value:int):
         raise HTTPException(500,f"An error occured while retriecing by id:'{value}'")
     return JSONResponse(result)
 
-@app.post("/chat")
+@app.post("/chat", response_class=PlainTextResponse)
 async def chat(request:ChatRequest):
     answer = generate_response(request.messages)
-    return {"response": answer}
-
-# @app.post("/chat")
-# async def chat(request: ChatRequest):
-#     try:
-#         response = await run_in_threadpool(
-#             generate_response,
-#             prompt=request.messages
-#         )
-#         return {"response": response}
-#     except Exception as e:
-#         logger.error(f"Generation error: {e}")
-#         raise HTTPException(status_code=500, detail=str(e))
+    return answer
