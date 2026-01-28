@@ -1,19 +1,20 @@
 from langchain.agents import create_agent
-from langchain_classic.chains.combine_documents import create_stuff_documents_chain 
-from langchain_classic.chains.retrieval import create_retrieval_chain
 from langchain_community.chat_models import ChatLlamaCpp
-from langchain.agents.middleware import wrap_model_call
+from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_classic.chains.retrieval import create_retrieval_chain
+from langchain_qdrant import QdrantVectorStore
 
 from settings import settings
 from tools import retrieve_context
-from utils import logger
+from utils import logger, get_client, get_embedder
 
 _RAG_CHAIN = None
 
 class LLMManager():
 
     _instance: ChatLlamaCpp | None=None
-    _agent = None
+    _retrieval_chain = None
 
     @classmethod
     def get_instance(cls):
@@ -29,56 +30,41 @@ class LLMManager():
         return cls._instance
     
     @classmethod
-    def get_agent(cls):
-        if cls._agent is None:
-            llm = cls.get_instance()        
-            system_instructions = (
-            "Ты — профессиональный ассистент по поиску информации в документации. "
-            "Твоя задача: отвечать на вопросы пользователя, используя данные из инструмента 'retrieve_context'.\n\n"
-            "ПРАВИЛА РАБОТЫ:\n"
-            "1. ИСПОЛЬЗУЙ ТОЛЬКО РУССКИЙ ЯЗЫК"
-            "2. Если вопрос требует данных из документов, ты ОБЯЗАН вызвать функцию 'retrieve_context'.\n"
-            "3. Формируй вызов функции в строгом соответствии с JSON-схемой.\n"
-            "4. НЕ ПИШИ финальный ответ от себя, пока не получишь данные от инструмента.\n"
-            "5. Когда данные получены, синтезируй ответ на русском языке на основе этих данных.\n"
-            "6. Если в документации нет ответа, так и скажи, не выдумывай факты."
-        )
-            cls._agent = create_agent(
-                model=llm,
-                tools=[retrieve_context],
-                system_prompt=system_instructions
+    def get_retrieval_chain(cls):
+        """Create retrieval chain for searching through vector db"""
+        if cls._retrieval_chain is None:
+            client =  get_client()
+            embedding = get_embedder()
+
+            vector_store = QdrantVectorStore(
+                client=client,
+                collection_name='document',
+                embedding=embedding,
+                content_payload_key="text"
             )
-        return cls._agent
+            
+            retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k":5})
+            
+            llm = cls.get_instance()
+
+
+            system_instructions = (
+            "Ты — профессиональный ассистент по поиску информации в документации.\n"
+            "Используй контекст из документов только если вопрос требует контекса. \n"
+            "Отвечай ТОЛЬКО на русском языке, используя предоставленный контекст.\n"
+            "Если в контексте нет информации для ответа — скажи об этом, НЕ выдумывай факты.\n\n"
+            "Контекст из документов:\n{context}"
+        )
+            qa_prompt=ChatPromptTemplate.from_messages([
+                ("system", system_instructions),
+                ("human","{input}")
+            ])
+
+            combine_docs_chain = create_stuff_documents_chain(llm,qa_prompt)
+
+            cls._retrieval_chain = create_retrieval_chain(retriever,combine_docs_chain)
+        return cls._retrieval_chain
     
-# @wrap_model_call
-# def dynamic_model_selection():
-#     'Choose model based on conversation complexity'
-#     pass
-
-# def get_rag_chain():
-  
-#     global _RAG_CHAIN
-
-#     if _RAG_CHAIN is None:
-#         llm = LLMManager.get_instance()
-#         retriever = retrieve(k=3)
-#         prompt = ChatPromptTemplate.from_messages([
-#             ("system", 
-#              "Ты — эксперт по градостроительным и земельным нормам Республики Беларусь. "
-#              "Ответь на вопросы о градостроительстве и земельным нормам ТОЛЬКО на основе предоставленного контекста. "
-#              "Если вопрос не касается этих тем, отвечай как обычно."
-#              "Если в контексте нет ответа, скажи: «В доступной документации ответ не найден.»\n\n"
-#              "Контекст:\n{context}"
-#             ),
-#             ("human", "{input}")
-#         ])
-
-#         document_chain = create_stuff_documents_chain(llm, prompt)
-#         _RAG_CHAIN = create_retrieval_chain(retriever, document_chain)
-    
-#     return _RAG_CHAIN
-
-
 def generate_response(messages:list):
     """
     Generate a response using the loaded LLM.
@@ -102,14 +88,13 @@ def generate_response(messages:list):
         return "Question is not defined"
 
     try:
-        agent = LLMManager.get_agent()
+        agent = LLMManager.get_retrieval_chain()
         logger.info(f"Agent type: {type(agent)}")
 
         try:
-            response = agent.invoke({"messages":messages})
+            response = agent.invoke({"input": query})
             logger.info(f"Response {response}")
-            logger.info(f'{response["messages"][-1].content}')
-            return response["messages"][-1].content
+            return response["answer"] 
         
         except Exception as e:
             logger.error(f"Error: {e}")
