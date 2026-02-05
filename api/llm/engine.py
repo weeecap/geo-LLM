@@ -1,20 +1,15 @@
-from langchain.agents import create_agent
 from langchain_community.chat_models import ChatLlamaCpp
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_classic.chains.retrieval import create_retrieval_chain
 from langchain_qdrant import QdrantVectorStore
 
-from settings import settings
-from tools import retrieve_context
-from utils import logger, get_client, get_embedder
-
-_RAG_CHAIN = None
+from .settings import settings
+from .utils import logger, get_client, get_embedder
 
 class LLMManager():
 
     _instance: ChatLlamaCpp | None=None
-    _retrieval_chain = None
 
     @classmethod
     def get_instance(cls):
@@ -27,44 +22,46 @@ class LLMManager():
                 verbose=settings.llm.verbose,
                 streaming=True
             )
+            logger.info(cls._instance)
+            logger.info("LLM was initialize")
         return cls._instance
-    
+ 
     @classmethod
     def get_retrieval_chain(cls):
         """Create retrieval chain for searching through vector db"""
-        if cls._retrieval_chain is None:
-            client =  get_client()
-            embedding = get_embedder()
+        client =  get_client()
+        embedding = get_embedder()
 
-            vector_store = QdrantVectorStore(
-                client=client,
-                collection_name='document',
-                embedding=embedding,
-                content_payload_key="text"
-            )
+        vector_store = QdrantVectorStore(
+            client=client,
+            collection_name='documents',
+            embedding=embedding,
+            content_payload_key="text"
+        )
+        
+        llm = LLMManager.get_instance()
+
+        retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k":5})
             
-            retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k":5})
-            
-            llm = cls.get_instance()
-
-
-            system_instructions = (
+        system_instructions = (
             "Ты — профессиональный ассистент по поиску информации в документации.\n"
-            "Используй контекст из документов только если вопрос требует контекса. \n"
+            "Используй контекст из документов при ответе на вопрос. \n"
             "Отвечай ТОЛЬКО на русском языке, используя предоставленный контекст.\n"
+            "На вход тебе подается история чата - отвечай на последний вопрос пользователя, используй остальную информацию в качестве контекста.\n"
+            "При генерации ответа добавляй источник, из которого был получен контекст и конкретную страницу.\n"
             "Если в контексте нет информации для ответа — скажи об этом, НЕ выдумывай факты.\n\n"
             "Контекст из документов:\n{context}"
         )
-            qa_prompt=ChatPromptTemplate.from_messages([
-                ("system", system_instructions),
-                ("human","{input}")
-            ])
+        qa_prompt=ChatPromptTemplate.from_messages([
+            ("system", system_instructions),
+            ("human","{input}")
+        ])
 
-            combine_docs_chain = create_stuff_documents_chain(llm,qa_prompt)
+        combine_docs_chain = create_stuff_documents_chain(llm,qa_prompt)
+        cls._retrieval_chain = create_retrieval_chain(retriever,combine_docs_chain)
 
-            cls._retrieval_chain = create_retrieval_chain(retriever,combine_docs_chain)
-        return cls._retrieval_chain
-    
+        return cls._retrieval_chain   
+
 def generate_response(messages:list):
     """
     Generate a response using the loaded LLM.
@@ -79,8 +76,8 @@ def generate_response(messages:list):
     query = None
 
     for msg in messages:
-        if msg.get("role") == "user":
-            query = msg["content"]
+        if msg.role == "user":
+            query = msg.content
             logger.info(f"Query - {query}")
             break
     
@@ -88,11 +85,11 @@ def generate_response(messages:list):
         return "Question is not defined"
 
     try:
-        agent = LLMManager.get_retrieval_chain()
-        logger.info(f"Agent type: {type(agent)}")
+        retriever = LLMManager.get_retrieval_chain()
+        logger.info(f"Retriever type: {type(retriever)}")
 
         try:
-            response = agent.invoke({"input": query})
+            response = retriever.invoke({"input": query})
             logger.info(f"Response {response}")
             return response["answer"] 
         
@@ -103,4 +100,3 @@ def generate_response(messages:list):
     except Exception as e:
         logger.error(f"RAG issue: {e}")
         return "An error occured while response processing"
-

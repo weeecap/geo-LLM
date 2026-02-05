@@ -4,8 +4,8 @@ from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
 import logging
 
-from schemas import PlotProperties
-from settings import settings
+from .schemas import PlotProperties, MultiPolygon
+from .settings import settings
 
 VECTOR_SIZE = settings.embedding.vector_size
 
@@ -93,7 +93,7 @@ unless select_by_condition func throw unexpected result'''
 #         return val
 #     return str(val)
 
-def generate_description(props: PlotProperties) -> str:
+def generate_description(props: PlotProperties, geom:MultiPolygon) -> str:
     """
     Generates a natural language description for land plot based on its attributes.
 
@@ -119,13 +119,13 @@ def generate_description(props: PlotProperties) -> str:
     parts = []
 
     if props.square:
-        parts.append(f"Площадь участка: {props.square} га.")
+        parts.append(f"Площадь участка:{props.square} га.")
 
     if props.propriet:
-        parts.append(f"Право: {props.propriet}.")
+        parts.append(f"Право:{props.propriet}.")
 
     if props.provide:
-        parts.append(f"Получен: {props.provide}.")
+        parts.append(f"Получен:{props.provide}.")
 
     if props.Electricit == "True":
         parts.append("Есть электроснабжение.")
@@ -137,9 +137,13 @@ def generate_description(props: PlotProperties) -> str:
         parts.append("Есть газоснабжение")
 
     if props.restrict:
-        parts.append(f"Ограничения: {props.restrict}.")
+        parts.append(f"Ограничения:{props.restrict}.")
+    
+    if geom.coordinates:
+        parts.append(f"Координаты:{geom.coordinates}.")
 
     if not parts:
         parts.append("Земельный участок.")
-    print(" ".join(parts))
     return " ".join(parts)
+
+

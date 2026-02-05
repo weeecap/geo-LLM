@@ -4,8 +4,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from qdrant_client.http import models
 from qdrant_client.models import VectorParams, Distance
 
-from settings import settings
-from utils import get_client, get_embedder, VECTOR_SIZE, logger
+from llm.settings import settings
+from llm.utils import get_client, get_embedder, VECTOR_SIZE, logger
 
 def ingest_doc(file_path:str, collection_name:str, file_name:str) -> dict:
     """

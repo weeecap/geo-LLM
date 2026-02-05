@@ -9,12 +9,14 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from schemas import ChatRequest
-from engine import generate_response, LLMManager
-from utils import logger
-from ingest.documents import ingest_doc
-from ingest.geo import ingest_feature
-from crud.qdrant_ops import collection_delete, select_by_condition, retrieve_point
+from llm.schemas import ChatRequest
+from llm.engine import generate_response, LLMManager
+from llm.utils import logger
+from llm.ingest.documents import ingest_doc
+from llm.ingest.geo import ingest_feature
+from llm.crud.qdrant_ops import collection_delete, select_by_condition, retrieve_point
+
+_LLM = None
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
@@ -41,6 +43,10 @@ app.add_middleware(
 
 @app.get("/")
 async def read_root():
+    global _LLM
+    if _LLM is None:
+        _LLM = LLMManager.get_instance()
+
     return {'message':"Hello"}
 
 @app.post('/add_plots')
@@ -128,4 +134,4 @@ async def select_by_id(collection_name:str, value:int):
 @app.post("/chat", response_class=PlainTextResponse)
 async def chat(request:ChatRequest):
     answer = generate_response(request.messages)
-    return answer
+    return answer 

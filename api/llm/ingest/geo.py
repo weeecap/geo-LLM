@@ -7,9 +7,9 @@ from qdrant_client.models import VectorParams, Distance
 from shapely.geometry import shape
 from shapely.errors import ShapelyError
 
-from schemas import FeatureCollection
-from settings import settings
-from utils import (
+from llm.schemas import FeatureCollection
+from llm.settings import settings
+from llm.utils import (
     logger, 
     get_client, 
     get_embedder, 
@@ -59,17 +59,15 @@ def ingest_feature(
     embedder = get_embedder()
     client = get_client()
 
-    if client.collection_exists(collection_name):
-        client.delete_collection(collection_name)
-
     logger.info("Creating collection '%s' with vector size %d and COSINE distance.", collection_name, VECTOR_SIZE)
-    client.create_collection(
-        collection_name=collection_name,
-        vectors_config=VectorParams(
-            size=VECTOR_SIZE, 
-            distance=Distance.COSINE
+    if not client.collection_exists(collection_name):
+        client.create_collection(
+            collection_name=collection_name,
+            vectors_config=VectorParams(
+                size=VECTOR_SIZE, 
+                distance=Distance.COSINE
+            )
         )
-    )
 
     points: List[models.PointStruct] = []
     features = collection.features
@@ -95,7 +93,7 @@ def ingest_feature(
             logger.warning("Skipping feature %s: geometry error - %s", plot_id, e)
             continue  
 
-        description = generate_description(props)
+        description = generate_description(props, geom)
         vector = embedder.embed_query(description)  
         payload = feature.properties.model_dump()
 
@@ -111,7 +109,7 @@ def ingest_feature(
         points.append(point)
 
     logger.info("Uploading %d points to collection '%s'...", len(points), collection_name)
-    client.upload_points(
+    client.upsert(
         collection_name=collection_name,
         points=points,
         wait=True  

@@ -28,7 +28,6 @@ export default function App() {
 
     try {
       const fullAnswer = await sendChatMessage(input);
-      // Имитируем streaming
       simulateTyping(fullAnswer, (char) => {
         setResponse(prev => prev + char);
       });

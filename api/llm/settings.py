@@ -26,13 +26,13 @@ class EmbeddingConfig(BaseModel):
     model_name:str = 'intfloat/multilingual-e5-small'
     vector_size:int = 384
     chunk_size:int = 500
-    chunk_overlap:int = 100   
+    chunk_overlap:int = 100   #меньше
 
 class LLMConfig(BaseModel):
     """
     Configuration for loading and running a local LLM in GGUF 
     """
-    model_path: str = "/Users/dzmitry.mikhasko/Documents/geo-rag/api/Mistral-Nemo-Instruct-2407-Q4_K_S.gguf"
+    model_path: str = "/Users/dzmitry.mikhasko/Documents/geo-rag/api/Hermes-2-Pro-Mistral-7B.Q5_K_M.gguf"
     temperature:float = 0.0
     n_ctx:int = 2048
     n_gpu_layers:int = -1

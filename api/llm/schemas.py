@@ -1,5 +1,9 @@
-from typing import List, Literal, Union, Optional, Dict
+from typing import List, Literal, Union, Optional, Dict, TypedDict
 from pydantic import BaseModel, ConfigDict
+
+from langchain.messages import AnyMessage
+from langgraph.graph import MessagesState
+from langmem.short_term import RunningSummary
 
 # ------------------------
 # Geometry primitives
@@ -16,7 +20,6 @@ PolygonCoords = List[LinearRing]
 
 MultiPolygonCoords = List[PolygonCoords]
 """Coordinates of a MultiPolygon: list of Polygon coordinate arrays"""
-
 
 # ----------------------------
 # GeoJSON Geometry Types
@@ -66,6 +69,7 @@ class PlotProperties(BaseModel):
     Electricit: Optional[str] = None
     Water: Optional[str] = None
     Gas: Optional[str] = None
+    
 
 # ------------------------------
 # Coordinate Reference System 
@@ -107,10 +111,19 @@ class FeatureCollection(BaseModel):
 # Chat Model
 # -------------------------------
 
-"""
- List of chat messages in format:
-    [{"role": "user", "content": "..."}, ...]
-"""
+class ChatMessage(BaseModel):
+    role: str
+    content: str 
 
 class ChatRequest(BaseModel):
-    messages: List[Dict[str, str]]
+    messages: List[ChatMessage]
+
+# ---------------
+# LLM Classes
+# ---------------
+
+class State(MessagesState):
+    context: dict[str, RunningSummary]
+
+class LLMInputState(TypedDict):
+    summarized_messages: list[AnyMessage]
