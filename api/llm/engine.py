@@ -5,7 +5,9 @@ from langchain_classic.chains.retrieval import create_retrieval_chain
 from langchain_qdrant import QdrantVectorStore
 
 from .settings import settings
-from .utils import logger, get_client, get_embedder
+from .utils import logger
+from utils.embedder import EmbeddingManager
+from utils.qdrant_client import QdrantManager
 
 class LLMManager():
 
@@ -29,8 +31,8 @@ class LLMManager():
     @classmethod
     def get_retrieval_chain(cls):
         """Create retrieval chain for searching through vector db"""
-        client =  get_client()
-        embedding = get_embedder()
+        client =  QdrantManager.get_instance()
+        embedding = EmbeddingManager.get_instance()
 
         vector_store = QdrantVectorStore(
             client=client,

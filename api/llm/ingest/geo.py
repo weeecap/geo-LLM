@@ -9,12 +9,9 @@ from shapely.errors import ShapelyError
 
 from llm.schemas import FeatureCollection
 from llm.settings import settings
-from llm.utils import (
-    logger, 
-    get_client, 
-    get_embedder, 
-    generate_description
-    )
+from llm.utils import logger, generate_description
+from utils.embedder import EmbeddingManager
+from utils.qdrant_client import QdrantManager
 
 VECTOR_SIZE = settings.embedding.vector_size
 
@@ -56,8 +53,8 @@ def ingest_feature(
             "message":"Pydantic FeatureCollection validation failed"
         }
     
-    embedder = get_embedder()
-    client = get_client()
+    embedder = EmbeddingManager.get_instance()
+    client = QdrantManager.get_instance()
 
     logger.info("Creating collection '%s' with vector size %d and COSINE distance.", collection_name, VECTOR_SIZE)
     if not client.collection_exists(collection_name):

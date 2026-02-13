@@ -1,16 +1,6 @@
-import torch
-from langchain_core.embeddings import Embeddings
-from sentence_transformers import SentenceTransformer
-from qdrant_client import QdrantClient
 import logging
 
 from .schemas import PlotProperties, MultiPolygon
-from .settings import settings
-
-VECTOR_SIZE = settings.embedding.vector_size
-
-_embedder = None
-_client = None
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -18,69 +8,6 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-
-class QueryEmbeddings(Embeddings):
-    """
-    A LangChain-compatible embedding wrapper for SentenceTransformer models
-    Class wraps a SentenceTransformer model and implements LangChain interface
-    
-    Args:
-        model_name (str, optional): The name or path of the SentenceTransformer model
-            to load
-    """
-    def __init__(self, model_name:str=settings.embedding.model_name) -> None:
-        super().__init__()
-        self.model = SentenceTransformer(model_name)
-
-    def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        logger.info('embed_document function is called')
-        passages = [f"passage: {text}" for text in texts]
-        embeddings = self.model.encode(
-            passages,
-            normalize_embeddings=True,
-            convert_to_numpy=False
-        )
-    
-        if isinstance(embeddings, torch.Tensor):
-            embeddings = embeddings.cpu().tolist()
-        return embeddings
-    
-    def embed_query(self, text: str) -> list[float]:
-        logger.info('embed_query function is called')
-        query = f'query: {text}'
-        embeddings =  self.model.encode(
-            query,
-            normalize_embeddings=True,
-            convert_to_numpy=False  
-        )
-        
-        if isinstance(embeddings, torch.Tensor):
-            embeddings = embeddings.cpu().tolist()
-        return embeddings
-
-def get_embedder():
-    """
-     Defining embedder using singleton pattern
-    """
-    global _embedder
-    if _embedder is None:
-        embedding_model = settings.embedding.model_name
-        _embedder = QueryEmbeddings(model_name=embedding_model)
-    logger.info("Embedder client was load")
-    return _embedder
-
-def get_client():
-    """
-    Defining Qdrant cient connection using singleton pattern
-    """
-    global _client 
-    if _client is None: 
-        _client = QdrantClient(
-            host=settings.qdrant.host,
-            port=settings.qdrant.port
-        )
-    logger.info("Qdrant client was load")
-    return _client
 
 '''should recreate this function to work properly 
 unless select_by_condition func throw unexpected result'''
