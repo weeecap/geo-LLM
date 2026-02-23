@@ -1,6 +1,9 @@
 from typing import Any
 from qdrant_client.http import models
-from llm.utils import get_client, logger
+
+from llm.utils import  logger
+from utils.embedder import EmbeddingManager
+from utils.qdrant_client import QdrantManager
 
 def collection_delete(collection_name:str) -> dict:
     '''
@@ -12,7 +15,7 @@ def collection_delete(collection_name:str) -> dict:
     Returns:
         dict: Succes confirmation message.
     '''
-    client = get_client()
+    client = QdrantManager.get_instance()
 
     if client.collection_exists(collection_name):
         logger.info("Deleting collection '%s'", collection_name)
@@ -43,7 +46,7 @@ def select_by_condition(collection_name:str, key:str, value:Any) -> dict:
     Returns:
         dict: Contains status, count, and list of matching points (ID + payload)        
     '''
-    client = get_client()
+    client = QdrantManager.get_instance()
 
     if not client.collection_exists(collection_name):
         logger.error("Collection '%s' does not exist", collection_name)
@@ -92,7 +95,7 @@ def select_by_condition(collection_name:str, key:str, value:Any) -> dict:
 
 def retrieve_point(collection_name:str, point_id:int) -> dict:
 
-    client = get_client()
+    client = QdrantManager.get_instance()
 
     if not client.collection_exists(collection_name):
         logger.error("Collection '%s' does not exist", collection_name)

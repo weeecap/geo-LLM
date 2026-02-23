@@ -90,11 +90,11 @@ def ingest_feature(
             logger.warning("Skipping feature %s: geometry error - %s", plot_id, e)
             continue  
 
-        description = generate_description(props, geom)
+        description = generate_description(props)
         vector = embedder.embed_query(description)  
         payload = feature.properties.model_dump()
 
-        payload["description"] = description
+        payload["page_content"] = description
         payload["geometry"] = json.dumps(feature.geometry.model_dump(), ensure_ascii=False)
         payload["location"] = {"lon": float(centroid.x), "lat": float(centroid.y)}
 

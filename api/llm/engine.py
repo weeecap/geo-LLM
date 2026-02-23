@@ -38,7 +38,7 @@ class LLMManager():
             client=client,
             collection_name='documents',
             embedding=embedding,
-            content_payload_key="text"
+            content_payload_key="page_content",
         )
         
         llm = LLMManager.get_instance()

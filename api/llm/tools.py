@@ -3,7 +3,9 @@ from langchain.tools import tool
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from typing import List
 
-from .utils import get_client, get_embedder, logger
+from utils.embedder import EmbeddingManager
+from utils.qdrant_client import QdrantManager
+from .utils import logger
 
 @tool(response_format='content_and_artifact')
 def retrieve_context(query:str):
@@ -11,8 +13,8 @@ def retrieve_context(query:str):
     "Retrieve information to help answer a query"
     
     logger.info('Retrieve_contex function has been call')
-    client = get_client()
-    embedding = get_embedder()
+    client = QdrantManager.get_instance()
+    embedding = EmbeddingManager.get_instance()
 
     vector_store = QdrantVectorStore(
         client=client,

@@ -20,7 +20,7 @@ unless select_by_condition func throw unexpected result'''
 #         return val
 #     return str(val)
 
-def generate_description(props: PlotProperties, geom:MultiPolygon) -> str:
+def generate_description(props: PlotProperties) -> str:
     """
     Generates a natural language description for land plot based on its attributes.
 
@@ -61,13 +61,10 @@ def generate_description(props: PlotProperties, geom:MultiPolygon) -> str:
         parts.append("Есть водоснабжение.")
     
     if props.Gas == "True":
-        parts.append("Есть газоснабжение")
+        parts.append("Есть газоснабжение.")
 
     if props.restrict:
         parts.append(f"Ограничения:{props.restrict}.")
-    
-    if geom.coordinates:
-        parts.append(f"Координаты:{geom.coordinates}.")
 
     if not parts:
         parts.append("Земельный участок.")

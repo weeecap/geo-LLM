@@ -5,7 +5,12 @@ from qdrant_client.http import models
 from qdrant_client.models import VectorParams, Distance
 
 from llm.settings import settings
-from llm.utils import get_client, get_embedder, VECTOR_SIZE, logger
+from llm.utils import logger
+
+from utils.embedder import EmbeddingManager
+from utils.qdrant_client import QdrantManager
+
+VECTOR_SIZE = settings.embedding.vector_size
 
 def ingest_doc(file_path:str, collection_name:str, file_name:str) -> dict:
     """
@@ -37,9 +42,9 @@ def ingest_doc(file_path:str, collection_name:str, file_name:str) -> dict:
             - "total_chunks" (int, optional): Total number of text chunks generated.
             - "ingested_points" (int, optional): Number of successfully uploaded vector points.
     """
-    embedder = get_embedder()
+    embedder = EmbeddingManager.get_instance()
     logger.info(f"'{embedder}")
-    client = get_client()
+    client = QdrantManager.get_instance()
 
     try:
         loader = PyPDFLoader(file_path)
