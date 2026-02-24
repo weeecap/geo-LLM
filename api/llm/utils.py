@@ -1,6 +1,6 @@
 import logging
 
-from .schemas import PlotProperties, MultiPolygon
+from .schemas import PlotProperties
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -44,6 +44,9 @@ def generate_description(props: PlotProperties) -> str:
         or contains no matching keys.
     """
     parts = []
+
+    if props.id:
+        parts.append(f"Номер в реестре:{props.id}.")
 
     if props.square:
         parts.append(f"Площадь участка:{props.square} га.")
