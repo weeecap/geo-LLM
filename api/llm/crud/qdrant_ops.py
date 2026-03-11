@@ -2,7 +2,6 @@ from typing import Any
 from qdrant_client.http import models
 
 from llm.utils import  logger
-from utils.embedder import EmbeddingManager
 from utils.qdrant_client import QdrantManager
 
 def collection_delete(collection_name:str) -> dict:

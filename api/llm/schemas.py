@@ -1,4 +1,4 @@
-from typing import List, Literal, Union, Optional, Dict, TypedDict
+from typing import List, Literal, Union, Optional, TypedDict, Dict
 from pydantic import BaseModel, ConfigDict
 
 from langchain.messages import AnyMessage
@@ -62,11 +62,11 @@ class PlotProperties(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    propriet: Optional[str] = None
+    ownership: Optional[str] = None
     provide: Optional[str] = None 
-    restrict: Optional[str] = None
+    restriction: Optional[str] = None
     square:float
-    Electricit: Optional[str] = None
+    Electricity: Optional[str] = None
     Water: Optional[str] = None
     Gas: Optional[str] = None
     
@@ -115,8 +115,16 @@ class ChatMessage(BaseModel):
     role: str
     content: str 
 
+# class ChatRequest(BaseModel):
+#     messages: List[ChatMessage]
+
+
 class ChatRequest(BaseModel):
-    messages: List[ChatMessage]
+    message: str
+
+
+class ChatResponse(BaseModel):
+    response: str
 
 # ---------------
 # LLM Classes
@@ -127,3 +135,26 @@ class State(MessagesState):
 
 class LLMInputState(TypedDict):
     summarized_messages: list[AnyMessage]
+
+# ---------------
+# Functions 
+# ---------------
+
+class FunctionCall(BaseModel):
+    arguments:dict
+    """
+    The arguments to call the function with, as generate by the model in JSON 
+    format. Note that the model does not always generate valid JSON, and may
+    hallucinate parametres not defined by function schema. 
+    """
+    name:str
+    """The name of the function to call"""
+
+class FunctionDefinition(BaseModel):
+    name: str
+    description: Optional[str] = None
+    parameters: Optional[Dict[str, object]] = None
+
+class FunctionSignature(BaseModel):
+    function: FunctionDefinition
+    type: Literal["function"]

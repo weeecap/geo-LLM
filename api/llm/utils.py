@@ -1,24 +1,20 @@
 import logging
+import ast
+import xml.etree.ElementTree as ET
+import json
+import re
+import os 
+from art import text2art
 
 from .schemas import PlotProperties
 
+script_dir  = os.path.dirname(os.path.abspath(__file__))
 logger = logging.getLogger(__name__)
 logging.basicConfig(
-    filename='logs.log',
+    format="%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s",
+    datefmt="%Y-%m-%d:%H:%M:%S",
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-
-'''should recreate this function to work properly 
-unless select_by_condition func throw unexpected result'''
-
-# def clean_value(val: Any) -> Any:
-
-#     if isinstance(val, str):
-#         return val.strip().replace("\n", " ")
-#     if val is None or isinstance(val, (bool,int,float)):
-#         return val
-#     return str(val)
 
 def generate_description(props: PlotProperties) -> str:
     """
@@ -51,13 +47,13 @@ def generate_description(props: PlotProperties) -> str:
     if props.square:
         parts.append(f"Площадь участка:{props.square} га.")
 
-    if props.propriet:
-        parts.append(f"Право:{props.propriet}.")
+    if props.ownership:
+        parts.append(f"Право:{props.ownership}.")
 
     if props.provide:
         parts.append(f"Получен:{props.provide}.")
 
-    if props.Electricit == "True":
+    if props.Electricity == "True":
         parts.append("Есть электроснабжение.")
     
     if props.Water == "True":
@@ -66,11 +62,9 @@ def generate_description(props: PlotProperties) -> str:
     if props.Gas == "True":
         parts.append("Есть газоснабжение.")
 
-    if props.restrict:
-        parts.append(f"Ограничения:{props.restrict}.")
+    if props.restriction:
+        parts.append(f"Ограничения:{props.restriction}.")
 
     if not parts:
         parts.append("Земельный участок.")
     return " ".join(parts)
-
-

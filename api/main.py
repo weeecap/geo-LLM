@@ -1,6 +1,7 @@
 import json
 import logging
 import tempfile
+import traceback
 import os
 
 from fastapi import FastAPI, Form, UploadFile, File, HTTPException
@@ -9,8 +10,8 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from llm.schemas import ChatRequest
-from llm.engine import generate_response, LLMManager
+from llm.schemas import ChatRequest, ChatMessage, ChatResponse
+from llm.engine.model_inference import ModelInference
 from llm.utils import logger
 from llm.ingest.documents import ingest_doc
 from llm.ingest.geo import ingest_feature
@@ -20,11 +21,12 @@ _LLM = None
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
-    LLMManager.get_instance()
+    ModelInference.get_instance()
     yield
 
 app = FastAPI(lifespan=lifespan)
 logging.info('Backend is started')
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -45,7 +47,7 @@ app.add_middleware(
 async def read_root():
     global _LLM
     if _LLM is None:
-        _LLM = LLMManager.get_instance()
+        _LLM = ModelInference.get_instance()
 
     return {'message':"Hello"}
 
@@ -107,12 +109,6 @@ async def delete_collection(collection_name:str = Form("land_plots")):
         raise HTTPException(500, f"An error occured while deleting '{collection_name}" )
     return JSONResponse(result)
 
-# @app.post('/delete_points')
-# async def delete_points():
-#     try:
-#         result = await run_in_threadpool()
-#     return JSONResponse
-
 @app.get("/select_by_value")
 async def select_by_value(collection_name:str, key:str, value:str):
     try:
@@ -131,7 +127,22 @@ async def select_by_id(collection_name:str, value:int):
         raise HTTPException(500,f"An error occured while retriecing by id:'{value}'")
     return JSONResponse(result)
 
-@app.post("/chat", response_class=PlainTextResponse)
-async def chat(request:ChatRequest):
-    answer = generate_response(request.messages)
-    return answer 
+@app.post("/chat")
+async def chat_endpoint(request: ChatRequest):
+    """
+    Эндпоинт для общения с Hermes-агентом.
+    """
+    try:
+        result = ModelInference.generate_response(request.message)
+
+        if isinstance(result, str):
+            return ChatResponse(response=result)
+
+        if isinstance(result, dict) and "output" in result:
+            return ChatResponse(response=result["output"])
+
+        return ChatResponse(response=str(result))
+
+    except Exception as e:
+        traceback.print_exc()
+        return ChatResponse(response=f"Ошибка: {str(e)}")
