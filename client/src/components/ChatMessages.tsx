@@ -1,3 +1,4 @@
+// components/ChatMessages.tsx
 import React from 'react';
 import Message from './Message';
 import { Message as MessageType } from '../types/chat';
@@ -16,10 +17,10 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, isLoading }) => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          height: '200px',
+          flex: 1,
           color: '#666',
           textAlign: 'center',
-          padding: '20px',
+          padding: '40px 20px',
         }}
       >
         <div style={{ fontSize: '48px', marginBottom: '16px' }}>💬</div>
@@ -39,16 +40,16 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, isLoading }) => {
       style={{
         flex: 1,
         overflowY: 'auto',
-        maxHeight: 'calc(100vh - 280px)',
         paddingRight: '8px',
         marginBottom: '24px',
       }}
     >
-      {messages.map((msg) => (
-        <Message key={msg.id} message={msg} />
+      {messages.map((msg, index) => (
+        <Message key={msg.id || index} message={msg} />
       ))}
-      
-      {isLoading && (
+
+      {/* Индикатор загрузки показываем, только если последнее сообщение пустое */}
+      {isLoading && messages[messages.length - 1]?.message === '' && (
         <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '16px' }}>
           <div
             style={{
@@ -76,4 +77,4 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, isLoading }) => {
   );
 };
 
-export default ChatMessages; 
+export default ChatMessages;

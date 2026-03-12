@@ -129,17 +129,20 @@ async def select_by_id(collection_name:str, value:int):
 
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
-    """
-    Эндпоинт для общения с Hermes-агентом.
-    """
     try:
         result = ModelInference.generate_response(request.message)
 
+        if isinstance(result, dict):
+            return ChatResponse(response=result.get("response", str(result)))
+        
         if isinstance(result, str):
+            try:
+                parsed = json.loads(result)
+                if isinstance(parsed, dict) and "response" in parsed:
+                    return ChatResponse(response=parsed["response"])
+            except:
+                pass
             return ChatResponse(response=result)
-
-        if isinstance(result, dict) and "output" in result:
-            return ChatResponse(response=result["output"])
 
         return ChatResponse(response=str(result))
 

@@ -1,14 +1,6 @@
 import logging
-import ast
-import xml.etree.ElementTree as ET
-import json
-import re
-import os 
-from art import text2art
-
 from .schemas import PlotProperties
 
-script_dir  = os.path.dirname(os.path.abspath(__file__))
 logger = logging.getLogger(__name__)
 logging.basicConfig(
     format="%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s",

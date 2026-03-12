@@ -1,3 +1,4 @@
+// App.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import QueryInput from './components/QueryInput';
 import ChatMessages from './components/ChatMessages';
@@ -9,49 +10,59 @@ const simulateTyping = (
   text: string,
   onProgress: (partial: string) => void,
   onComplete: () => void,
-  speedMs: number = 15
-) => {
+  speedMs: number = 10
+): (() => void) => {
+  console.log('⌨️ Начинаем печать, длина текста:', text.length);
+  
   let index = 0;
   const interval = setInterval(() => {
     if (index < text.length) {
-      onProgress(text.slice(0, index + 1));
       index++;
+      const partial = text.slice(0, index);
+      onProgress(partial);
     } else {
       clearInterval(interval);
+      console.log('✅ Печать завершена');
       onComplete();
     }
   }, speedMs);
 
-  return () => clearInterval(interval);
+  return () => {
+    console.log('🛑 Остановка печати');
+    clearInterval(interval);
+  };
 };
 
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const stopTypingRef = useRef<(() => void) | null>(null); // ← храним функцию остановки
 
   useChatScroll(messages, !loading);
 
   const handleSendMessage = async (query: string) => {
-    if (loading) return;
+    if (loading || !query.trim()) return;
 
-    // Добавляем сообщение пользователя
+    console.log('📤 Отправка запроса:', query);
+
+    // 1. Сообщение пользователя
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: query,
+      message: query.trim(),
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMessage]);
 
-    // Заглушка для ответа ассистента
+    // 2. Пустое сообщение ассистента
     const assistantMessageId = (Date.now() + 1).toString();
     setMessages((prev) => [
       ...prev,
       {
         id: assistantMessageId,
         role: 'assistant',
-        content: '',
+        message: '',
         timestamp: new Date(),
       },
     ]);
@@ -60,58 +71,91 @@ export default function App() {
     abortControllerRef.current = new AbortController();
 
     try {
-      const fullAnswer = await sendChatMessage(query);
+      // 3. Получаем ответ
+      const fullAnswer = await sendChatMessage(query, abortControllerRef.current?.signal);
+      console.log('📥 Получен ответ, длина:', fullAnswer.length);
 
-      // Симуляция печатания
+      if (!fullAnswer || fullAnswer.trim() === '') {
+        throw new Error('Пустой ответ от сервера');
+      }
+
       let currentContent = '';
-      const stopTyping = simulateTyping(
+
+      // 4. Запускаем печать
+      stopTypingRef.current = simulateTyping(
         fullAnswer,
         (partial) => {
           currentContent = partial;
           setMessages((prev) =>
             prev.map((msg) =>
-              msg.id === assistantMessageId ? { ...msg, content: partial } : msg
+              msg.id === assistantMessageId
+                ? { ...msg, message: partial }
+                : msg
             )
           );
         },
         () => {
           setMessages((prev) =>
             prev.map((msg) =>
-              msg.id === assistantMessageId ? { ...msg, content: currentContent } : msg
+              msg.id === assistantMessageId
+                ? { ...msg, message: currentContent }
+                : msg
             )
           );
+          // 🔧 Печать завершена — сбрасываем ссылку
+          stopTypingRef.current = null;
         }
       );
-
-      return () => stopTyping();
+      
+      // 🔧 УБРАЛИ finally с stopTyping()! Печать должна завершиться сама.
+      
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        console.log('Запрос отменён');
+        console.log('🔄 Запрос отменён');
+        // При отмене тоже останавливаем печать
+        if (stopTypingRef.current) {
+          stopTypingRef.current();
+          stopTypingRef.current = null;
+        }
         return;
       }
 
-      console.error('Ошибка:', error);
-      const errorMessage = error.message || '❌ Не удалось связаться с бэкендом';
-      
+      console.error('❌ Ошибка:', error);
+      const errorMessage = error.message || '❌ Не удалось получить ответ';
+
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.id === assistantMessageId ? { ...msg, content: errorMessage } : msg
+          msg.id === assistantMessageId
+            ? { ...msg, message: errorMessage }
+            : msg
         )
       );
     } finally {
       setLoading(false);
       abortControllerRef.current = null;
+      // 🔧 НЕ вызываем stopTyping() здесь!
     }
   };
 
   const handleClearChat = () => {
+    // 🔧 Остановить печать при очистке
+    if (stopTypingRef.current) {
+      stopTypingRef.current();
+      stopTypingRef.current = null;
+    }
     setMessages([]);
+    console.log('🗑️ Чат очищен');
   };
 
+  // 🔧 Остановка при размонтировании компонента
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+      }
+      if (stopTypingRef.current) {
+        stopTypingRef.current();
+        stopTypingRef.current = null;
       }
     };
   }, []);
@@ -126,8 +170,7 @@ export default function App() {
         fontFamily: 'Inter, -apple-system, sans-serif',
       }}
     >
-      {/* Хедер */}
-      <div
+      <header
         style={{
           padding: '16px 32px',
           backgroundColor: 'rgba(20, 25, 40, 0.9)',
@@ -160,18 +203,14 @@ export default function App() {
               borderRadius: '8px',
               fontSize: '14px',
               cursor: 'pointer',
-              transition: 'all 0.2s',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(108, 117, 255, 0.2)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(108, 117, 255, 0.15)')}
           >
             Очистить чат
           </button>
         )}
-      </div>
+      </header>
 
-      {/* Основной контейнер чата */}
-      <div
+      <main
         style={{
           maxWidth: '800px',
           width: '100%',
@@ -180,30 +219,26 @@ export default function App() {
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
-          height: 'calc(100vh - 140px)', // ← Вычисляем высоту с учетом хедера и футера
+          height: 'calc(100vh - 140px)',
         }}
       >
         <ChatMessages messages={messages} isLoading={loading} />
-        
-        {/* КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: блок ввода прилипает к низу */}
         <div style={{ marginTop: 'auto' }}>
           <QueryInput onSubmit={handleSendMessage} disabled={loading} />
         </div>
-      </div>
+      </main>
 
-      {/* Футер с дисклеймером */}
-      <div
+      <footer
         style={{
           padding: '16px 32px',
           borderTop: '1px solid rgba(255, 255, 255, 0.1)',
           textAlign: 'center',
           color: '#666',
           fontSize: '13px',
-          position: 'relative', // ← Чтобы не перекрывался
         }}
       >
         Бэкенд: http://localhost:8000 • Данные: Государственный кадастр недвижимости РБ
-      </div>
+      </footer>
     </div>
   );
 }

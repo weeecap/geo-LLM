@@ -2,7 +2,7 @@ import json
 from typing import List, Sequence, Tuple
 
 from langchain_core.agents import AgentAction, AgentActionMessageLog
-from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage
 
 def convert_agent_action_to_messages(
         agent_action: AgentAction, 
@@ -21,11 +21,9 @@ def convert_agent_action_to_messages(
 
     messages = []
 
-    # 1. Добавляем оригинальный <tool_call>
-    if hasattr(agent_action, "message_log"):
+    if isinstance(agent_action, AgentActionMessageLog):
         messages.extend(agent_action.message_log)
 
-    # 2. Добавляем <tool_response> в AIMessage
     tool_response_json = json.dumps(
         {"name": agent_action.tool, "content": observation},
         ensure_ascii=False
@@ -39,7 +37,6 @@ def convert_agent_action_to_messages(
 
     return messages
 
-    return messages
 
 def create_function_message(
         agent_action: AgentAction, 
