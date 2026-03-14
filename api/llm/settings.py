@@ -34,7 +34,7 @@ class LLMConfig(BaseModel):
     """
     model_path: str = "/Users/dzmitry.mikhasko/Documents/geo-rag/api/Hermes-2-Pro-Mistral-7B.Q5_K_M.gguf"
     temperature:float = 0.1
-    n_ctx:int = 8192
+    n_ctx:int = 12288
     n_gpu_layers:int = -1
     verbose:bool = False
 

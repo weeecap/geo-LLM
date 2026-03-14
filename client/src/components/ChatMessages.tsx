@@ -48,26 +48,42 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, isLoading }) => {
         <Message key={msg.id || index} message={msg} />
       ))}
 
-      {/* Индикатор загрузки показываем, только если последнее сообщение пустое */}
-      {isLoading && messages[messages.length - 1]?.message === '' && (
-        <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '16px' }}>
+      {/* 🔧 Пульсирующая надпись "Обработка запроса..." */}
+      {isLoading && (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-start',
+            marginBottom: '16px',
+          }}
+        >
           <div
             style={{
               backgroundColor: '#2a2a2a',
               borderRadius: '16px 16px 16px 4px',
               padding: '14px 18px',
               color: '#888',
+              fontSize: '15px',
             }}
           >
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <span style={{ animation: 'pulse 1.5s infinite' }}>•</span>
-              <span style={{ animation: 'pulse 1.5s 0.3s infinite' }}>•</span>
-              <span style={{ animation: 'pulse 1.5s 0.6s infinite' }}>•</span>
-            </div>
+            <span
+              style={{
+                animation: 'pulse 1.5s ease-in-out infinite',
+                display: 'inline-block',
+              }}
+            >
+              Обработка запроса...
+            </span>
             <style>{`
               @keyframes pulse {
-                0%, 100% { opacity: 0.3; }
-                50% { opacity: 1; }
+                0%, 100% {
+                  opacity: 0.4;
+                  transform: scale(0.98);
+                }
+                50% {
+                  opacity: 1;
+                  transform: scale(1);
+                }
               }
             `}</style>
           </div>

@@ -6,11 +6,11 @@ import os
 
 from fastapi import FastAPI, Form, UploadFile, File, HTTPException
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from llm.schemas import ChatRequest, ChatMessage, ChatResponse
+from llm.schemas import ChatRequest, ChatResponse
 from llm.engine.model_inference import ModelInference
 from llm.utils import logger
 from llm.ingest.documents import ingest_doc
@@ -49,7 +49,7 @@ async def read_root():
     if _LLM is None:
         _LLM = ModelInference.get_instance()
 
-    return {'message':"Hello"}
+    return {'message':"Agentic Geo AI Backend is running"}
 
 @app.post('/add_plots')
 async def add_plots(

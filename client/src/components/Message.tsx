@@ -9,8 +9,11 @@ interface MessageProps {
 const Message: React.FC<MessageProps> = ({ message }) => {
   const isUser = message.role === 'user';
 
-  // 🔧 УБРАЛИ проверку на пустоту! Иначе текст не появится во время печати
-  
+  // 🔧 Показываем сообщение только если есть текст
+  if (!message.message || message.message.trim() === '') {
+    return null;
+  }
+
   return (
     <div
       style={{
@@ -31,11 +34,9 @@ const Message: React.FC<MessageProps> = ({ message }) => {
           whiteSpace: 'pre-line',
           wordBreak: 'break-word',
           fontSize: '15px',
-          // 🔧 Добавили минимальную высоту, чтобы блок не схлопывался
-          minHeight: message.message ? 'auto' : '44px',
         }}
       >
-        {message.message || (isUser ? '' : 'Печатает...')}
+        {message.message}
       </div>
     </div>
   );
