@@ -3,6 +3,8 @@ from pathlib import Path
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_classic.prompts import SystemMessagePromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder
 
+from ..utils import logger
+
 current_dir = Path(__file__).resolve().parent
 
 yaml_path = current_dir / "prompt.yaml"
@@ -18,3 +20,4 @@ nous_hermes_prompt = ChatPromptTemplate.from_messages([
     HumanMessagePromptTemplate.from_template(human_msg_template),
     MessagesPlaceholder(variable_name = "agent_scratchpad")
 ])
+logger.info(f'[System Prompt] {nous_hermes_prompt}')

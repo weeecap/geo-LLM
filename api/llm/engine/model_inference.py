@@ -103,6 +103,9 @@ class ModelInference():
         )
 
         prompt = nous_hermes_prompt.partial(tools=tools_dict)
+        logger.info(
+            f"[ModelInference] prompt: {prompt}"
+        )
         agent = create_agent(
             llm=llm, 
             prompt=prompt
@@ -114,7 +117,7 @@ class ModelInference():
             verbose=True,
             return_intermediate_steps=True
         )
-        logger.info("[ModelInference] AgentExecutor initialized")
+        logger.info(f"[ModelInference] AgentExecutor initialized with props {cls._agent_executor}")
         return cls._agent_executor
 
 
