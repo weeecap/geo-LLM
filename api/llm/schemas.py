@@ -64,11 +64,15 @@ class PlotProperties(BaseModel):
     id: int
     ownership: Optional[str] = None
     provide: Optional[str] = None 
-    restriction: Optional[str] = None
+    restricts: Optional[str] = None
     square:float
-    Electricity: Optional[str] = None
-    Water: Optional[str] = None
-    Gas: Optional[str] = None
+    electro: Optional[str] = None
+    water: Optional[str] = None
+    gas: Optional[str] = None
+    email:Optional[str] = None
+    link:Optional[str] = None
+    district:Optional[str] = None
+    coordinates:Optional[dict] = None
     
 
 # ------------------------------

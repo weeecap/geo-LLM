@@ -19,7 +19,7 @@ class QueryEmbeddings(Embeddings):
         self.model = SentenceTransformer(model_name)
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        logger.info('embed_document function is called')
+        logger.info('[Embedder]embed_document function is called')
         passages = [f"passage: {text}" for text in texts]
         embeddings = self.model.encode(
             passages,
@@ -32,7 +32,7 @@ class QueryEmbeddings(Embeddings):
         return embeddings
     
     def embed_query(self, text: str) -> list[float]:
-        logger.info('embed_query function is called')
+        logger.info('[Embedder]embed_query function is called')
         query = f'query: {text}'
         embeddings =  self.model.encode(
             query,

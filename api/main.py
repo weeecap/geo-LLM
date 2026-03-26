@@ -1,10 +1,12 @@
+import os
 import json
 import logging
 import tempfile
 import traceback
-import os
+from typing import Annotated
 
-from fastapi import FastAPI, Form, UploadFile, File, HTTPException
+from fastapi import FastAPI, Form, UploadFile, File, HTTPException, Depends
+from fastapi.security import OAuth2PasswordBearer
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +20,7 @@ from llm.ingest.geo import ingest_feature
 from llm.crud.qdrant_ops import collection_delete, select_by_condition, retrieve_point
 
 _LLM = None
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
@@ -50,6 +53,10 @@ async def read_root():
         _LLM = ModelInference.get_instance()
 
     return {'message':"Agentic Geo AI Backend is running"}
+
+@app.get('/auth')
+async def user_auth(token:Annotated[str, Depends(oauth2_scheme)]):
+    return {"token": token}
 
 @app.post('/add_plots')
 async def add_plots(

@@ -4,12 +4,9 @@ from typing import Dict, Any, List
 from qdrant_client.http import models
 from qdrant_client.models import VectorParams, Distance
 
-from shapely.geometry import shape
-from shapely.errors import ShapelyError
-
 from llm.schemas import FeatureCollection
 from llm.settings import settings
-from llm.utils import logger, generate_description
+from llm.utils import logger, generate_description, prepare_data
 from utils.embedder import EmbeddingManager
 from utils.qdrant_client import QdrantManager
 
@@ -47,11 +44,8 @@ def ingest_feature(
     try:
         collection = FeatureCollection(**geojson_data)
     except Exception as e:
-        logger.error("Pydantic FeatureCollection validation failed: %s", e)
-        return {
-            "status":"error",
-            "message":"Pydantic FeatureCollection validation failed"
-        }
+        logger.error("Pydantic validation failed: %s", e)
+        return {"status": "error", "message": "Validation failed"}
     
     embedder = EmbeddingManager.get_instance()
     client = QdrantManager.get_instance()
@@ -67,36 +61,26 @@ def ingest_feature(
         )
 
     points: List[models.PointStruct] = []
-    features = collection.features
+    for feature in collection.features:
+        prepared = prepare_data(feature)
 
-    for feature in features:
-        plot_id = feature.properties.id
-        props = feature.properties or {}
-        
-        geom = feature.geometry
-        if not geom:
-            logger.warning("Skipping feature %s: missing geometry", plot_id)
+        if not prepared:
             continue
-        try:
-            geom_dict = feature.geometry.model_dump()
-            shapely_geom = shape(geom_dict)
-            
-            if not shapely_geom.is_valid:
-                shapely_geom = shapely_geom.buffer(0)
-            
-            centroid = shapely_geom.centroid
-            
-        except (ShapelyError, Exception) as e:
-            logger.warning("Skipping feature %s: geometry error - %s", plot_id, e)
-            continue  
+        
+        plot_id = prepared.get("id")
 
-        description = generate_description(props)
-        vector = embedder.embed_query(description)  
-        payload = feature.properties.model_dump()
+        if plot_id is None:
+            logger.warning("Skipping feature: missing 'id' in properties")
+            continue
+
+        description = generate_description(prepared)
+        vector = embedder.embed_query(description)
+
+        payload = prepared.copy()
 
         payload["page_content"] = description
         payload["geometry"] = json.dumps(feature.geometry.model_dump(), ensure_ascii=False)
-        payload["location"] = {"lon": float(centroid.x), "lat": float(centroid.y)}
+        payload["location"] = prepared["coordinates"]
 
         point = models.PointStruct(
             id=plot_id,
@@ -115,7 +99,7 @@ def ingest_feature(
     return {
         "status": "success",
         "collection_name": collection_name,
-        "total_features": len(features),
+        "total_features": len(collection.features),
         "ingested_points": len(points),
         "message": f"Successfully ingested {len(points)} land plots into '{collection_name}'."
     }

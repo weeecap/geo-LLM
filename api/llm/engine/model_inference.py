@@ -55,7 +55,7 @@ class ModelInference():
 
         vector_store = QdrantVectorStore(
             client=client,
-            collection_name='documents',
+            collection_name='land_plots',
             embedding=embedding,
             content_payload_key="page_content",
         )

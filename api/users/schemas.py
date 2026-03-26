@@ -1,20 +1,13 @@
-# from pydantic import BaseModel, ConfigDict, Field
-# import uuid
+import enum 
+from pydantic import BaseModel
 
-# class User(BaseModel):
-#     model_config=ConfigDict(from_attributes=True, extra='ignore')
+class Roles(str, enum.Enum):
+    USER = "user"
+    ASSISTANT = "assistant"
 
-#     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-#     nickname: str = Field(..., min_length=1, max_length=50, description='Nickname')
-#     email:str = Field(unique=True, index=True)
-#     password: str = Field(exclude=True)
+class Token(BaseModel):
+    acces_token:str
+    token_type:str
 
-# class Registration(BaseModel):
-#     model_config=ConfigDict(from_attributes=True, extra='ignore')
-
-#     id:int 
-#     nickname: str = Field(..., min_length=1, max_length=50, description="User's nickname")
-#     password: str = Field(..., min_length=5, max_length=30, description='Password, no less than 5 symbols')
-
-
-    
+class TokenData(BaseModel):
+    nickname:str | None=None
